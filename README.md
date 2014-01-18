@@ -19,6 +19,7 @@ the file referenced contains all the patches you need. If you have more than
 one Drush make file (and most projects do), you can define a patches.make that
 "includes" the other files.
 
+_Example patches.make for a Drush Make project that references any files that contain patches:_
 ```ini
 # Our project contains patches for both Drupal core and contrib modules/themes.
 includes[] = "drupal-org.make"
@@ -31,7 +32,7 @@ comments to give me even more info about each patch, like the issue to the
 Drupal.org comment where I found the patch, or if the patch has been committed
 to the module, and noting that I should remove it when I upgrade.
 
-_Contents of patches.make_
+_Example patches.make for a project not using Drush Make:_
 ```ini
 ; @see https://drupal.org/comment/5460918#comment-5460918
 ; @todo Remove when updating to 7.x-2.0-beta2 or higher
@@ -49,8 +50,8 @@ projects[noderefcreate][patch][] = "https://drupal.org/files/763454-9.patch"
 
 ## Installation
 
-Download or git clone into your ~/.drush directory, or wherever your local Drush
-commands are stored.
+Download or git clone this repository into your ~/.drush directory, or wherever
+your local Drush commands are stored.
 
 You should also add the canonical location of the patch make file to your
 project's drushrc.php:
