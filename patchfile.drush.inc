@@ -136,13 +136,15 @@ function drush_patchfile_get_patched_projects($patchfile = NULL, $use_cache = FA
   if (!empty($patchfile)) {
     // Cache not only by filename, but also by the time the file was modified
     // so that a drush cache clear is not necessary to pick up changes.
-    $cid = drush_get_cid('patchfile', array(), array($patchfile, filemtime($patchfile)));
-    if ($use_cache && $cache = drush_cache_get($cid)) {
+    $cid = _drush_patchfile_get_file_cid($patchfile);
+    if ($cid && $use_cache && $cache = drush_cache_get($cid)) {
       $projects = $cache->data;
     }
     else {
       $projects = drush_patchfile_parse_info_file($patchfile);
-      drush_cache_set($cid, $projects);
+      if ($cid && $use_cache) {
+        drush_cache_set($cid, $projects);
+      }
     }
   }
   else {
@@ -150,6 +152,57 @@ function drush_patchfile_get_patched_projects($patchfile = NULL, $use_cache = FA
   }
 
   return $projects;
+}
+
+function _drush_patchfile_get_file_cid($file) {
+  $params = array();
+  $includes = _drush_patchfile_get_all_files($file);
+  foreach ($includes as $include) {
+    $params[] = $include . ':' . filemtime($include);
+  }
+  return drush_get_cid('patchfile', array(), $params);
+}
+
+/**
+ * A copy of make_file_parse_info() but that only returns an array of files.
+ *
+ * @see make_file_parse_info()
+ */
+function _drush_patchfile_get_all_files($makefile) {
+  $data = make_get_data($makefile);
+  if (empty($data)) {
+    drush_set_error('MAKE_INVALID_MAKE_FILE', dt('Invalid or empty make file: !makefile', array('!makefile' => $makefile)));
+    return array();
+  }
+
+  $info = _drush_drupal_parse_info_file($data);
+  if (empty($info)) {
+    return array();
+  }
+
+  $includes = array();
+
+  if (!empty($info['includes']) && is_array($info['includes'])) {
+    $include_path = dirname($makefile);
+    foreach ($info['includes'] as $include) {
+      if (is_string($include)) {
+        if (make_valid_url($include, TRUE) && ($file = _drush_patchfile_get_all_files($include))) {
+          $includes = array_merge($includes, $file);
+        }
+        elseif (file_exists($include_path . '/' . $include) && ($file = _drush_patchfile_get_all_files($include_path . '/' . $include))) {
+          $includes = array_merge($includes, $file);
+        }
+        elseif (file_exists($include) && ($file = _drush_patchfile_get_all_files($include))) {
+          $includes = array_merge($includes, $file);
+        }
+        else {
+          make_error('BUILD_ERROR', dt("Include file missing: !include", array('!include' => $include)));
+        }
+      }
+    }
+  }
+
+  return array_merge($includes, array($makefile));
 }
 
 function drush_patchfile_parse_info_file($file) {
