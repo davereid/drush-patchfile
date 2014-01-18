@@ -9,11 +9,13 @@
  * Implements hook_drush_command().
  */
 function patchfile_drush_command() {
+  $options = array(
+    'patch-file' => 'Location of the patch make file.',
+  );
+
   $items['patch-status'] = array(
     'description' => 'List the patches that should be applied to the site.',
-    'options' => array(
-      'patch-file' => 'Filename of the patch makefile to use.',
-    ),
+    'options' => $options,
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     'aliases' => array('ps'),
   );
@@ -25,8 +27,8 @@ function patchfile_drush_command() {
     ),
     'required-arguments' => 1,
     'options' => array(
-      'patch-file' => 'Filename of the patch makefile to use.',
-    ),
+      'select' => 'If provided, will prompt for which patch to apply.',
+    ) + $options,
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
 
     'aliases' => array('pp'),
@@ -79,19 +81,18 @@ function drush_patchfile_patch_project($project_name) {
     return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", array('@project' => $project_name)));
   }
 
-  // Build the options list.
-  $options = _drush_patchfile_convert_patches_to_list($patches);
-  //if (count($options) > 1) {
-    $options = array('all' => dt('All')) + $options;
-  //}
-
-  $result = drush_choice($options, dt("Which patch do you want to apply?"));
-  if ($result !== FALSE) {
-    if ($result != 'all') {
+  if (drush_get_option('select')) {
+    $options = array('all' => dt('All')) + _drush_patchfile_convert_patches_to_list($patches);
+    $result = drush_choice($options, dt("Which patch do you want to apply?"));
+    if ($result === FALSE) {
+      return FALSE;
+    }
+    elseif ($result != 'all') {
       $patches = array($patches[$result]);
     }
-    return _drush_patchfile_project_apply_patches($project_name, $patches, $project_directory);
   }
+
+  return _drush_patchfile_project_apply_patches($project_name, $patches, $project_directory);
 }
 
 /**
