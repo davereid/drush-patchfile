@@ -47,21 +47,18 @@ function drush_patchfile_patch_status() {
   $rows = array();
   $rows[] = array(dt('Project'), dt('Patch'), dt('Status'));
 
-  foreach ($projects as $project => $project_info) {
+  foreach ($projects as $project_name => $project_info) {
+    $project_extra = '';
+    if (!drush_patchfile_project_get_directory($project_name)) {
+      $project_extra .= ' ' . dt('(missing)');
+    }
+
     foreach ($project_info['patch'] as $patch) {
-      $rows[] = array($project, basename($patch['url']), 'Unknown');
+      $rows[] = array($project_name . $project_extra, _drush_patchfile_patch_short_name($patch), 'Unknown');
     }
   }
 
   drush_print_table($rows);
-}
-
-function _drush_patchfile_convert_patches_to_list(array $patches) {
-  $return = array();
-  foreach ($patches as $patch) {
-    $return[] = basename($patch['url']);
-  }
-  return $return;
 }
 
 /**
@@ -82,7 +79,7 @@ function drush_patchfile_patch_project($project_name) {
   }
 
   if (drush_get_option('select')) {
-    $options = array('all' => dt('All')) + _drush_patchfile_convert_patches_to_list($patches);
+    $options = array('all' => dt('All')) + array_map('_drush_patchfile_patch_short_name', $patches);
     $result = drush_choice($options, dt("Which patch do you want to apply?"));
     if ($result === FALSE) {
       return FALSE;
@@ -123,6 +120,11 @@ $request = array (
   }
 }
 
+function _drush_patchfile_patch_short_name($patch) {
+  $return = basename($patch['url']);
+  $return = preg_replace('/\.(patch|diff)$/', '', $return);
+  return $return;
+}
 
 function drush_patchfile_get_patched_projects($patchfile = NULL, $use_cache = FALSE) {
   if (!isset($patchfile)) {
