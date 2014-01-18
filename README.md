@@ -6,7 +6,7 @@ store data about a site, installation profile, etc. When using Drush Make files,
 typically you add information about the patches applied to a project in the
 following way:
 
-```make
+```ini
 projects[nodequeue][subdir] = contrib
 projects[nodequeue][version] = 2.0-alpha1
 projects[nodequeue][patch][] = "http://drupal.org/files/issues/1023606-qid-to-name-6.patch"
@@ -19,7 +19,7 @@ the file referenced contains all the patches you need. If you have more than
 one Drush make file (and most projects do), you can define a patches.make that
 "includes" the other files.
 
-```make
+```ini
 # Our project contains patches for both Drupal core and contrib modules/themes.
 includes[] = "drupal-org.make"
 includes[] = "drupal-org-core.make"
@@ -31,7 +31,8 @@ comments to give me even more info about each patch, like the issue to the
 Drupal.org comment where I found the patch, or if the patch has been committed
 to the module, and noting that I should remove it when I upgrade.
 
-```make
+_Contents of patches.make_
+```ini
 ; @see https://drupal.org/comment/5460918#comment-5460918
 ; @todo Remove when updating to 7.x-2.0-beta2 or higher
 projects[nodequeue][patch][] = "https://drupal.org/files/node-mark-deprecated-1402634-1.patch"
@@ -78,22 +79,22 @@ after the download has been completed, the patch utility will attempt to apply
 the patches again to the project. Use the patch application messages to see if
 you will need to reroll the patch, or if it has been fixed.
 
-```
+The following indicates that the patches were successfully re-applied.
+
+```bash
 drush dl noderefcreate
 Install location sites/all/modules/contrib/noderefcreate already exists. Do you want to overwrite it? (y/n): y
 Project noderefcreate (7.x-1.0) downloaded to sites/all/modules/contrib/noderefcreate. [success]
 noderefcreate patched with 763454-9.patch. [ok]
 ```
 
-The above indicates that the patch was successfully re-applied.
+The following means either the patch does not apply and needs to be re-rolled,
+or that the patch has possibly been included in the release that you downloaded,
+and is no longer necessary.
 
-```
+```bash
 drush dl noderefcreate
 Install location sites/all/modules/contrib/noderefcreate already exists. Do you want to overwrite it? (y/n): y
 Project noderefcreate (7.x-1.0) downloaded to sites/all/modules/contrib/noderefcreate. [success]
 Unable to patch noderefcreate with 763454-9.patch. [error]
 ```
-
-The above means either the patch does not apply and needs to be re-rolled, or
-that the patch has possibly been included in the release that you downloaded,
-and is no longer necessary.
