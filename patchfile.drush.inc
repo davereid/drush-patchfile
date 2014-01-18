@@ -113,7 +113,7 @@ $request = array (
 
   if (drush_patchfile_get_project_patches($request['name'])) {
     //if (drush_confirm(dt("Patches detected for @project. Do you want to attempt to re-apply them?", array('@project' => $request['name'])))) {
-    // For some reason, using drush_invoke_process causes drush_get_context('DRUSH_AFFIRMATIVE') to flip from false to true, which skips the patch choice screen. Directly invoke for now.
+      // @todo Should this skip the patch choice? If not, we should use drush_invoke_process()
       //drush_invoke_process('@self', 'patch-project', array($request['name']));
       drush_patchfile_patch_project($request['name']);
     //}
