@@ -30,8 +30,20 @@ function patchfile_drush_command() {
       'select' => 'If provided, will prompt for which patch to apply.',
     ) + $options,
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
-
     'aliases' => array('pp'),
+  );
+  $items['patch-add'] = array(
+    'description' => 'Add a new patch to the make file.',
+    'arguments' => array(
+      'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
+      'patch-file' => 'The path to the patch to apply. Can be an external URL.',
+    ),
+    'required-arguments' => TRUE,
+    'options' => array(
+      'no-apply' => 'Do not apply the patch to the project.',
+    ) + $options,
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+    'aliases' => array('pa'),
   );
 
   return $items;
@@ -96,6 +108,49 @@ function drush_patchfile_patch_project($project_name) {
   }
 
   return _drush_patchfile_project_apply_patches($project_name, $patches, $project_directory);
+}
+
+/**
+ * Command callback for drush patch-project.
+ *
+ * @param string $project_name
+ *   The project name to apply patches to from the manifest.
+ */
+function drush_patchfile_patch_add($project_name, $patch_url) {
+  $file = drush_get_option('patch-file');
+
+  $project_directory = drush_patchfile_project_get_directory($project_name);
+  if (empty($project_directory)) {
+    return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", array('@project' => $project_name)));
+  }
+
+  $patch = $patch_url;
+  _drush_patchfile_preprocess_local_file_url($patch, $file);
+
+  // Check to see if this project is already patched with this patch.
+  $projects = drush_patchfile_get_patched_projects();
+  if (isset($projects[$project_name])) {
+    if (in_array($patch, $projects[$project_name]['patch'])) {
+      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @patch is already listed as a patch for @project.", array('@patch' => $patch_url, '@project' => $project_name)));
+    }
+  }
+
+  if (!drush_get_option('no-apply')) {
+    if (_drush_patchfile_project_apply_patches($project_name, array($patch), $project_directory)) {
+      _drush_patchfile_add_patch($project_name, $patch_url, $file);
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    if (_make_download_file($patch['url'])) {
+      _drush_patchfile_add_patch($project_name, $patch_url, $file);
+    }
+    else {
+      return drush_set_error('DRUSH_PATCH_NOT_FOUND', dt("The patch @patch could not be found.", array('@patch' => $patch_url, '@project' => $project_name)));
+    }
+  }
 }
 
 /**
@@ -343,6 +398,31 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   } elseif (substr($info['url'], 0, 8) == 'file:///') {
     $info['url'] = substr($info['url'], 7);
     $info['local'] = TRUE;
+  }
+}
+
+/**
+ * Add a patch record to a make file.
+ *
+ * @param string $project_name
+ *   The project being patched.
+ * @param string $patch_url
+ *   The URL of the patch (remote or local).
+ * @param string $file
+ *   The make file to add the patch record to.
+ *
+ * @return bool
+ *   TRUE if the file was appended successfully, or FALSE otherwise.
+ */
+function _drush_patchfile_add_patch($project_name, $patch_url, $file) {
+  $output = "\nprojects[{$project_name}][patch][] = \"{$patch_url}\"\n";
+  $result = file_put_contents($file, $output, FILE_APPEND);
+  if ($result !== FALSE) {
+    drush_log(dt('Added patch @patch to @project in @file.', array('@patch' => $patch_url, '@project' => $project_name, '@file' => $file)), 'success');
+    return TRUE;
+  }
+  else {
+    return drush_set_error('DRUSH_MAKE_FILE_NO_WRITE', dt('Unable to append to file @file.', array('@file' => $file)));
   }
 }
 
