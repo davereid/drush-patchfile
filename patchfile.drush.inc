@@ -59,7 +59,7 @@ function drush_patchfile_patch_status() {
       $rows[] = array(
         $project_name . $project_extra,
         _drush_patchfile_patch_short_name($patch),
-        drush_patchfile_is_patch_applied($patch, $project_directory),
+        drush_patchfile_is_patch_applied($patch, $project_directory, TRUE),
       );
     }
   }
