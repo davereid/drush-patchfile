@@ -48,13 +48,19 @@ function drush_patchfile_patch_status() {
   $rows[] = array(dt('Project'), dt('Patch'), dt('Status'));
 
   foreach ($projects as $project_name => $project_info) {
+    $project_directory = drush_patchfile_project_get_directory($project_name);
     $project_extra = '';
-    if (!drush_patchfile_project_get_directory($project_name)) {
+
+    if (empty($project_directory)) {
       $project_extra .= ' ' . dt('(missing)');
     }
 
     foreach ($project_info['patch'] as $patch) {
-      $rows[] = array($project_name . $project_extra, _drush_patchfile_patch_short_name($patch), 'Unknown');
+      $rows[] = array(
+        $project_name . $project_extra,
+        _drush_patchfile_patch_short_name($patch),
+        drush_patchfile_is_patch_applied($patch, $project_directory),
+      );
     }
   }
 
@@ -127,11 +133,11 @@ function _drush_patchfile_patch_short_name($patch) {
 }
 
 function drush_patchfile_get_patched_projects($patchfile = NULL, $use_cache = FALSE) {
+  $projects = array();
+
   if (!isset($patchfile)) {
     $patchfile = drush_get_option('patch-file');
   }
-
-  $projects = array();
 
   if (!empty($patchfile)) {
     // Cache not only by filename, but also by the time the file was modified
@@ -202,7 +208,7 @@ function _drush_patchfile_get_all_files($makefile) {
     }
   }
 
-  return array_merge($includes, array($makefile));
+  return array_merge(array($makefile), $includes);
 }
 
 function drush_patchfile_parse_info_file($file) {
@@ -261,6 +267,65 @@ function drush_patchfile_project_get_directory($project_name) {
   }
 
   return FALSE;
+}
+
+/**
+ * Test if a patch is currently applied to a directory.
+ *
+ * @param array $patch
+ *   A patch array, must have 'url' value defined at minimum for
+ *   _make_download_file().
+ * @param string $directory
+ *   The directory the patch should be applied to.
+ * @param bool $nice_format
+ *   Boolean if TRUE will return the status in a human-readable format.
+ *
+ * @return bool|null
+ *   TRUE if the patch is currently applied. FALSE if the patch is not
+ *   currently applied, but can be. NULL if we could not determine if
+ *   the patch is applied or not (likely re-roll needed).
+ */
+function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format = FALSE) {
+  // @todo Should we add some kind of caching here based on the patch
+
+  $status = NULL;
+
+  if ($filename = _make_download_file($patch['url'])) {
+    $patch_levels = array('-p1', '-p0');
+    foreach ($patch_levels as $patch_level) {
+      // Test if the patch can be reverted, which would mean it is applied.
+      $result = drush_shell_exec('cd %s && GIT_DIR=. git apply --check -R %s %s --verbose', $directory, $patch_level, $filename);
+      //if ($patch_level == '-p1') { echo implode("\n", drush_shell_exec_output()) . "\n"; }
+      if ($result) {
+        $status = TRUE;
+        break;
+      }
+
+      // Test if the patch can be re-applied.
+      $result = drush_shell_exec('cd %s && GIT_DIR=. git apply --check %s %s --verbose', $directory, $patch_level, $filename);
+      //if ($patch_level == '-p1') { echo implode("\n", drush_shell_exec_output()) . "\n"; }
+      if ($result) {
+        $status = FALSE;
+        break;
+      }
+    }
+
+    drush_op('unlink', $filename);
+  }
+
+  if (!$nice_format) {
+    return $status;
+  }
+
+  if ($status === TRUE) {
+    return dt('Applied');
+  }
+  elseif ($status === FALSE) {
+    return dt('NOT APPLIED');
+  }
+  else {
+    return dt('UNDETERMINED');
+  }
 }
 
 /**
