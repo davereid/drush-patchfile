@@ -229,7 +229,7 @@ function drush_patchfile_parse_info_file($file) {
 
       // Normalize each patch record.
       foreach ($project_info['patch'] as &$patch_info) {
-       _drush_patchfile_preprocess_local_file_url($patch_info);
+       _drush_patchfile_preprocess_local_file_url($patch_info, $file);
       }
     }
   }
@@ -333,12 +333,12 @@ function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format
  *
  * @see DrushMakeProject::preprocessLocalFileUrl()
  */
-function _drush_patchfile_preprocess_local_file_url(&$info) {
+function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   if (is_string($info)) {
     $info = array('url' => $info, 'local' => FALSE);
   }
   if (!_drush_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
-    $info['url'] = $this->make_directory . '/' . $info['url'];
+    $info['url'] = dirname($makefile) . '/' . $info['url'];
     $info['local'] = TRUE;
   } elseif (substr($info['url'], 0, 8) == 'file:///') {
     $info['url'] = substr($info['url'], 7);
