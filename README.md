@@ -1,5 +1,15 @@
 # Drush Patch File
 
+## Why?
+
+This project seeks to solve the following problems:
+
+* How do I document what patches I've applied to a project?
+* How do I reliably know what patches are applied or not without manually checking every single one?
+* How can I remember to reapply a patch after downloading a module update?
+
+## About
+
 This is a set of Drush commands to help you manage patches on your local Drupal
 installation. Most developers (should) know about Drush Make files as a way to
 store data about a site, installation profile, etc. When using Drush Make files,
