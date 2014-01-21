@@ -499,7 +499,7 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
         // }
         // $patches_txt .= '- ' . $patch_url . "\n";
 
-        drush_log(dt('@name patched with @filename.', $dt_args), 'ok');
+        drush_log(dt('@name patched with @filename.', $dt_args), 'success');
       }
       else {
         make_error('PATCH_ERROR', dt("Unable to patch @name with @filename.", $dt_args));
