@@ -6,11 +6,11 @@ This project seeks to solve the following problems:
 
 * How do I document what patches I've applied to a project?
 * How do I reliably know what patches are applied or not without manually checking every single one?
-* How can I remember to reapply a patch after downloading a module update?
+* How can I be reminded that I need to reapply a patch after downloading a module update?
 
 ## About
 
-This is a set of Drush commands to help you manage patches on your local Drupal
+This is a set of [Drush](https://github.com/drush-ops/drush) commands to help you manage patches on your local Drupal
 installation. Most developers (should) know about Drush Make files as a way to
 store data about a site, installation profile, etc. When using Drush Make files,
 typically you add information about the patches applied to a project in the
@@ -54,9 +54,10 @@ projects[noderefcreate][patch][] = "https://drupal.org/files/763454-9.patch"
 
 ## Requirements
 
-- Drush 5.x or higher
+- [Drush](https://github.com/drush-ops/drush) 5.x or higher
 - A valid Drush make file for patches (or normal Drush make files) as described
   above.
+- [Git](http://git-scm.com/downloads)
 
 ## Installation
 
