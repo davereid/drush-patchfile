@@ -392,13 +392,20 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   if (is_string($info)) {
     $info = array('url' => $info, 'local' => FALSE);
   }
-  if (!_drush_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
+  if (!_drush_patchfile_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
     $info['url'] = dirname($makefile) . '/' . $info['url'];
     $info['local'] = TRUE;
   } elseif (substr($info['url'], 0, 8) == 'file:///') {
     $info['url'] = substr($info['url'], 7);
     $info['local'] = TRUE;
   }
+}
+
+/**
+ * A duplicate of _drush_is_url() so this will work on 5.x
+ */
+function _drush_patchfile_is_url($url) {
+  return parse_url($url, PHP_URL_SCHEME) !== NULL;
 }
 
 /**
