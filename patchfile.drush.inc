@@ -144,7 +144,7 @@ function drush_patchfile_patch_add($project_name, $patch_url) {
   }
 
   if (!drush_get_option('no-apply')) {
-    if (_drush_patchfile_project_apply_patches($project_name, array($patch), $project_directory)) {
+    if (_drush_patchfile_project_apply_patches($project_name, array($patch), $project_directory) || drush_get_option('force')) {
       _drush_patchfile_add_patch($project_name, $patch_url, $file);
     }
     else {
@@ -152,7 +152,7 @@ function drush_patchfile_patch_add($project_name, $patch_url) {
     }
   }
   else {
-    if (_make_download_file($patch['url'])) {
+    if (_make_download_file($patch['url']) || drush_get_option('force')) {
       _drush_patchfile_add_patch($project_name, $patch_url, $file);
     }
     else {
