@@ -115,13 +115,21 @@ function drush_patchfile_patch_project($project_name) {
  *
  * @param string $project_name
  *   The project name to apply patches to from the manifest.
+ * @param string $patch_url
+ *   The URL containing the patch file.
  */
 function drush_patchfile_patch_add($project_name, $patch_url) {
   $file = drush_get_option('patch-file');
 
+  $args = array(
+    '@project' => $project_name,
+    '@patch' => $patch_url,
+    '@file' => $file,
+  );
+
   $project_directory = drush_patchfile_project_get_directory($project_name);
   if (empty($project_directory)) {
-    return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", array('@project' => $project_name)));
+    return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", $args));
   }
 
   $patch = $patch_url;
@@ -131,7 +139,7 @@ function drush_patchfile_patch_add($project_name, $patch_url) {
   $projects = drush_patchfile_get_patched_projects();
   if (isset($projects[$project_name])) {
     if (in_array($patch, $projects[$project_name]['patch'])) {
-      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @patch is already listed as a patch for @project.", array('@patch' => $patch_url, '@project' => $project_name)));
+      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @patch is already listed as a patch for @project in @file.", $args));
     }
   }
 
@@ -148,7 +156,7 @@ function drush_patchfile_patch_add($project_name, $patch_url) {
       _drush_patchfile_add_patch($project_name, $patch_url, $file);
     }
     else {
-      return drush_set_error('DRUSH_PATCH_NOT_FOUND', dt("The patch @patch could not be found.", array('@patch' => $patch_url, '@project' => $project_name)));
+      return drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @patch.', $args));
     }
   }
 }
@@ -373,13 +381,13 @@ function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format
   }
 
   if ($status === TRUE) {
-    return dt('Applied');
+    return dt('Yes');
   }
   elseif ($status === FALSE) {
-    return dt('NOT APPLIED');
+    return dt('NO');
   }
   else {
-    return dt('UNDETERMINED');
+    return dt('UNKOWN');
   }
 }
 
@@ -514,7 +522,7 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
       drush_op('unlink', $filename);
     }
     else {
-      make_error('DOWNLOAD_ERROR', 'Unable to download ' . $info['url'] . '.');
+      drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @patch.', array('@patch' => $info['url'])));
       return FALSE;
     }
   }
