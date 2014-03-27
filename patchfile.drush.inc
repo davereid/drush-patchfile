@@ -85,13 +85,15 @@ function drush_patchfile_patch_status() {
  * @param string $project_name
  *   The project name to apply patches to from the manifest.
  */
-function drush_patchfile_patch_project($project_name) {
+function drush_patchfile_patch_project($project_name, $project_directory = NULL) {
   $patches = drush_patchfile_get_project_patches($project_name);
   if (empty($patches)) {
     return drush_set_error('DRUSH_PROJECT_NO_PATCHES', dt("There are no patches to apply to @project.", array('@project' => $project_name)));
   }
 
-  $project_directory = drush_patchfile_project_get_directory($project_name);
+  if (!isset($project_directory)) {
+    $project_directory = drush_patchfile_project_get_directory($project_name);
+  }
   if (empty($project_directory)) {
     return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", array('@project' => $project_name)));
   }
@@ -184,7 +186,11 @@ $request = array (
     //if (drush_confirm(dt("Patches detected for @project. Do you want to attempt to re-apply them?", array('@project' => $request['name'])))) {
       // @todo Should this skip the patch choice? If not, we should use drush_invoke_process()
       //drush_invoke_process('@self', 'patch-project', array($request['name']));
-      drush_patchfile_patch_project($request['name']);
+      $dir = $request['full_project_path'];
+      if (strpos($dir, drush_get_context('DRUSH_DRUPAL_ROOT')) === FALSE) {
+        $dir = drush_get_context('DRUSH_DRUPAL_ROOT') . '/' . $dir;
+      }
+      drush_patchfile_patch_project($request['name'], $dir);
     //}
   }
 }
