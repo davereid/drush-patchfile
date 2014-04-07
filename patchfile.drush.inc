@@ -187,8 +187,9 @@ $request = array (
       // @todo Should this skip the patch choice? If not, we should use drush_invoke_process()
       //drush_invoke_process('@self', 'patch-project', array($request['name']));
       $dir = $request['full_project_path'];
-      if (strpos($dir, drush_get_context('DRUSH_DRUPAL_ROOT')) === FALSE) {
-        $dir = drush_get_context('DRUSH_DRUPAL_ROOT') . '/' . $dir;
+      $root = drush_get_context('DRUSH_DRUPAL_ROOT');
+      if (!empty($root) && strpos($dir, $root) === FALSE) {
+        $dir = $root . '/' . $dir;
       }
       drush_patchfile_patch_project($request['name'], $dir);
     //}
