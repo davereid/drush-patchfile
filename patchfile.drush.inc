@@ -57,14 +57,14 @@ function drush_patchfile_patch_status() {
   }
 
   $rows = array();
-  $rows[] = array(dt('Project'), dt('Patch'), dt('Status'));
+  $rows[] = array(dt('Project'), dt('Patch'), dt('Applied'));
 
   foreach ($projects as $project_name => $project_info) {
     $project_directory = drush_patchfile_project_get_directory($project_name);
     $project_extra = '';
 
     if (empty($project_directory)) {
-      $project_extra .= ' ' . dt('(missing)');
+      $project_extra .= ' ' . _drush_patchfile_color('red', dt('(missing)'));
     }
 
     foreach ($project_info['patch'] as $patch) {
@@ -76,7 +76,7 @@ function drush_patchfile_patch_status() {
     }
   }
 
-  drush_print_table($rows);
+  drush_print_table($rows, TRUE);
 }
 
 /**
@@ -388,14 +388,29 @@ function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format
   }
 
   if ($status === TRUE) {
-    return dt('Yes');
+    return _drush_patchfile_color('green', dt('Yes'));
   }
   elseif ($status === FALSE) {
-    return dt('NO');
+    return _drush_patchfile_color('red', dt('No'));
   }
   else {
-    return dt('UNKOWN');
+    return _drush_patchfile_color('yellow', dt('Unsure'));
   }
+}
+
+function _drush_patchfile_color($color, $string) {
+  $colors = array(
+    'red' => 31,
+    'green' => 32,
+    'yellow' => 33,
+    'blue' => 34,
+  );
+
+  if (drush_get_context('DRUSH_NOCOLOR') || !isset($colors[$color])) {
+    return $string;
+  }
+
+  return sprintf("\033[1;%sm%s\033[0m", $colors[$color], $string);
 }
 
 /**
