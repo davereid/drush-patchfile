@@ -1,0 +1,11 @@
+{
+  "name": "davereid/drush-patchfile",
+  "description": "Helps manage patches for your Drupal install using Drush.",
+  "type": "drush-extension",
+  "keywords": ["drush","patches"],
+  "homepage": "https://bitbucket.org/davereid/drush-patchfile",
+  "license": "GPLv2",
+  "require": {
+    "php": ">=5.3.0"
+  }
+}
