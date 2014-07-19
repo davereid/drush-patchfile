@@ -189,7 +189,7 @@ $request = array (
       $dir = $request['full_project_path'];
       $root = drush_get_context('DRUSH_DRUPAL_ROOT');
       if (!empty($root) && strpos($dir, $root) === FALSE) {
-        $dir = $root . '/' . $dir;
+        //$dir = $root . '/' . $dir;
       }
       drush_patchfile_patch_project($request['name'], $dir);
     //}
