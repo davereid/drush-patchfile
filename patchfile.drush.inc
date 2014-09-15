@@ -141,34 +141,47 @@ function drush_patchfile_patch_project($project_name, $project_directory = NULL)
  * @param string $patch_url
  *   The URL containing the patch file.
  */
-function drush_patchfile_patch_add($project_name, $patch_url) {
+function drush_patchfile_patch_add($project_name, $url) {
   $file = drush_get_option('patch-file');
+  $patch = $url;
 
   $args = array(
     '@project' => $project_name,
-    '@patch' => $patch_url,
+    '@url' => $url,
     '@file' => $file,
   );
+
+  $patches = _drush_patchfile_get_possible_patches_from_url($url);
+  if ($patches !== FALSE) {
+    if (empty($patches)) {
+      return drush_set_error('DRUSH_PROJECT_URL_NO_PATCHES', dt("No patches found on @url.", $args));
+    }
+    else {
+      $patch = drush_choice($patches, dt("Which patch do you want to apply?"));
+      if ($patch === FALSE) {
+        return FALSE;
+      }
+    }
+  }
 
   $project_directory = drush_patchfile_project_get_directory($project_name);
   if (empty($project_directory)) {
     return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", $args));
   }
 
-  $patch = $patch_url;
   _drush_patchfile_preprocess_local_file_url($patch, $file);
 
   // Check to see if this project is already patched with this patch.
   $projects = drush_patchfile_get_patched_projects();
   if (isset($projects[$project_name])) {
     if (in_array($patch, $projects[$project_name]['patch'])) {
-      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @patch is already listed as a patch for @project in @file.", $args));
+      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @url is already listed as a patch for @project in @file.", $args));
     }
   }
 
   if (!drush_get_option('no-apply')) {
     if (_drush_patchfile_project_apply_patches($project_name, array($patch), $project_directory) || drush_get_option('force')) {
-      _drush_patchfile_add_patch($project_name, $patch_url, $file);
+      _drush_patchfile_add_patch($project_name, $url, $file);
     }
     else {
       return FALSE;
@@ -176,10 +189,10 @@ function drush_patchfile_patch_add($project_name, $patch_url) {
   }
   else {
     if (_make_download_file($patch['url']) || drush_get_option('force')) {
-      _drush_patchfile_add_patch($project_name, $patch_url, $file);
+      _drush_patchfile_add_patch($project_name, $url, $file);
     }
     else {
-      return drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @patch.', $args));
+      return drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @url.', $args));
     }
   }
 }
@@ -585,4 +598,45 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
   //   }
   // }
   return TRUE;
+}
+
+function _drush_patchfile_get_possible_patches_from_url($url) {
+  if (preg_match('~^https?://(?:www.)?drupal.org(/node/\d+(#comment-\d+)?)~', $url, $matches)) {
+    $patches = array();
+    $filename = drush_download_file($url, drush_tempnam(md5($url)));
+    @$dom = DOMDocument::loadHTMLFile($filename);
+    $xpath = new DOMXpath($dom);
+
+    foreach ($xpath->query("//table[@id='extended-file-field-table-field-issue-files']/tbody/tr[not(contains(concat(' ',normalize-space(@class),' '),' element-hidden '))]") as $element) {
+      $file_xpath = $xpath->query("td[@class='extended-file-field-table-filename']//a", $element);
+      if (!$file_xpath->length) {
+        continue;
+      }
+
+      // If a comment number was provided, then filter the results to only
+      // patches that match the comment.
+      $cid_query = "td[@class='extended-file-field-table-cid']//a";
+      if (!empty($matches[2])) {
+        $cid_query .= "[@href='{$matches[1]}']";
+      }
+      $cid_xpath = $xpath->query($cid_query, $element);
+      if (!$cid_xpath->length) {
+        continue;
+      }
+      $cid = ltrim($cid_xpath->item(0)->textContent, '#');
+
+      $size = $xpath->query("td[@class='extended-file-field-table-filesize']", $element)->item(0)->textContent;
+      $author = $xpath->query("td[@class='extended-file-field-table-uid']//a", $element)->item(0)->textContent;
+
+      $patch_url = $file_xpath->item(0)->getAttribute('href');
+      $patches[$patch_url] = array(
+        'patch' => $file_xpath->item(0)->textContent,
+        'details' =>  sprintf("%10s by %s on comment %d", $size, $author, $cid),
+      );
+    }
+
+    return $patches;
+  }
+
+  return FALSE;
 }
