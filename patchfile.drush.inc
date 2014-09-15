@@ -45,6 +45,12 @@ function patchfile_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     'aliases' => array('pa'),
   );
+  $items['patch-apply-all'] = array(
+    'description' => 'Apply all patches',
+    'options' => $options,
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+    'aliases' => array('paa'),
+  );
 
   return $items;
 }
@@ -77,6 +83,21 @@ function drush_patchfile_patch_status() {
   }
 
   drush_print_table($rows, TRUE);
+}
+
+/**
+ * Command callback for drush patch-apply-all
+ */
+function drush_patchfile_patch_apply_all() {
+  $projects = drush_patchfile_get_patched_projects();
+
+  if (empty($projects)) {
+    return drush_print(dt('No patches found.'));
+  }
+
+  foreach ($projects as $project_name => $project_info) {
+    drush_patchfile_patch_project($project_name);
+  }
 }
 
 /**
