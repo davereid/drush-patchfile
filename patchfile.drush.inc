@@ -502,10 +502,12 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
       // the 'patch' command.
       if (!$patched) {
         foreach ($patch_levels as $patch_level) {
-          // --no-backup-if-mismatch here is a hack that fixes some
-          // differences between how patch works on windows and unix.
-          if ($patched = drush_shell_cd_and_exec($project_directory, "patch %s --no-backup-if-mismatch < %s", $patch_level, $filename)) {
-            break;
+          $checked = drush_shell_cd_and_exec($project_directory, "patch %s --dry-run < %s", $patch_level, $filename);
+          if ($checked) {
+            // Apply the first successful style.
+            if ($patched = drush_shell_cd_and_exec($project_directory, "patch %s < %s", $patch_level, $filename)) {
+              break;
+            }
           }
         }
       }
