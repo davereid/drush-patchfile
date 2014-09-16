@@ -184,6 +184,9 @@ function drush_patchfile_patch_add($project_name, $url) {
       _drush_patchfile_add_patch($project_name, $url, $file);
     }
     else {
+      if (drush_confirm("Would you still like to add this patch to the patch file?")) {
+        _drush_patchfile_add_patch($project_name, $url, $file);
+      }
       return FALSE;
     }
   }
@@ -556,6 +559,7 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
         '@name' => $project_name,
         '@filename' => basename($filename),
       );
+      drush_op('unlink', $filename);
 
       if ($patched) {
         // if (!$ignore_checksums && !_make_verify_checksums($info, $filename)) {
@@ -576,8 +580,8 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
       }
       else {
         make_error('PATCH_ERROR', dt("Unable to patch @name with @filename.", $dt_args));
+        return FALSE;
       }
-      drush_op('unlink', $filename);
     }
     else {
       drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @patch.', array('@patch' => $info['url'])));
