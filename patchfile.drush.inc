@@ -604,8 +604,16 @@ function _drush_patchfile_get_possible_patches_from_url($url) {
   }
 
   if (preg_match('~^https://github\.com/[\w-]+/[\w-]+/pull/\d+$~i', $url, $matches)) {
-    if (@file_get_contents($url . '.patch')) {
-      return array($url . '.patch' => $url);
+    $patch_url = $url . '.patch';
+    if (@file_get_contents($patch_url)) {
+      return array($patch_url => $patch_url);
+    }
+  }
+
+  if (preg_match('~^https://bitbucket\.org/([\w-]+)/([\w-]+)/pull-request/(\d+)~i', $url, $matches)) {
+    $patch_url = "https://bitbucket.org/api/2.0/repositories/{$matches[1]}/{$matches[2]}/pullrequests/{$matches[3]}/diff";
+    if (@file_get_contents($patch_url)) {
+      return array($patch_url => $patch_url);
     }
   }
 
