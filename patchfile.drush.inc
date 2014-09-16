@@ -158,7 +158,9 @@ function drush_patchfile_patch_add($project_name, $url) {
     return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", $args));
   }
 
-  _drush_patchfile_preprocess_local_file_url($patch, $file);
+  if (!_drush_patchfile_preprocess_local_file_url($patch, $file)) {
+    return FALSE;
+  }
 
   // Check to see if this project is already patched with this patch.
   $projects = drush_patchfile_get_patched_projects();
@@ -444,12 +446,20 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
     if (empty($patches)) {
       throw new Exception("Unable to determine patch file for {$info['url']}.");
     }
+    elseif (count($patches) == 1) {
+      $info['url'] = key($patches);
+    }
     else {
       if ($patch = drush_choice($patches, dt("Which patch do you want to apply?"))) {
         $info['url'] = $patch;
       }
+      else {
+        return FALSE;
+      }
     }
   }
+
+  return TRUE;
 }
 
 /**
