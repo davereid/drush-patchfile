@@ -76,6 +76,27 @@ $options['patch-file'] = '../patches.make';
 
 ## Usage
 
+### drush patch-add (pa)
+
+Apply a patch to a project and list it in the patch file.
+
+Adding a patch with a direct patch remote URL:
+```bash
+drush patch-add noderefcreate https://drupal.org/files/763454-9.patch
+```
+
+Adding a patch from a Drupal.org issue:
+```bash
+drush patch-add noderefcreate https://www.drupal.org/node/763454
+Which patch do you want to apply?
+ [0]  :  Cancel
+ [1]  :  763454-9.patch                                         3.37 KB by BrockBoland on comment 9
+ [2]  :  763454-6-to-9.interdiff.txt                            2.43 KB by BrockBoland on comment 9
+ [3]  :  noderefcreate_763454_multiredirect_to_origin.patch     3.19 KB by froboy on comment 5
+ [4]  :  noderefcreate_763454_multiredirect_to_origin.patch     3.16 KB by froboy on comment 6
+ [5]  :  noderefcreate_763454_multiredirect.patch               2.29 KB by akamaus on comment 4
+```
+
 ### drush patch-status (ps)
 
 See a summary of the status of patches that have been applied. You'll receive
