@@ -577,12 +577,16 @@ function _drush_patchfile_get_possible_patches_from_url($url) {
         if (!$cid_xpath->length) {
           continue;
         }
-        $cid = ltrim($cid_xpath->item(0)->textContent, '#');
+
+        // Validate that this is actually a .patch or .diff file.
+        $patch_url = $file_xpath->item(0)->getAttribute('href');
+        if (!in_array(pathinfo($patch_url, PATHINFO_EXTENSION), array('patch', 'diff'))) {
+          continue;
+        }
 
         $size = $xpath->query("td[@class='extended-file-field-table-filesize']", $element)->item(0)->textContent;
         $author = $xpath->query("td[@class='extended-file-field-table-uid']//a", $element)->item(0)->textContent;
-
-        $patch_url = $file_xpath->item(0)->getAttribute('href');
+        $cid = ltrim($cid_xpath->item(0)->textContent, '#');
         $patches[$patch_url] = array(
           'patch' => $file_xpath->item(0)->textContent,
           'details' =>  sprintf("%10s by %s on comment %d", $size, $author, $cid),
