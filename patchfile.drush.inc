@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/src/DrushPatchFileGit.php';
+
 /**
  * @file
  * Drush integration for patch make files.
@@ -393,41 +395,22 @@ function drush_patchfile_project_get_directory($project_name) {
  *   the patch is applied or not (likely re-roll needed).
  */
 function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format = FALSE) {
-  // @todo Should we add some kind of caching here based on the patch
-
-  $status = NULL;
+  $applied = NULL;
 
   if ($filename = _make_download_file($patch['url'])) {
-    $patch_levels = array('-p1', '-p0');
-    foreach ($patch_levels as $patch_level) {
-      // Test if the patch can be reverted, which would mean it is applied.
-      $result = drush_shell_cd_and_exec($directory, 'GIT_DIR=. git apply --check -R %s %s --verbose', $patch_level, $filename);
-      //if ($patch_level == '-p1') { echo implode("\n", drush_shell_exec_output()) . "\n"; }
-      if ($result) {
-        $status = TRUE;
-        break;
-      }
-
-      // Test if the patch can be re-applied.
-      $result = drush_shell_cd_and_exec($directory, 'GIT_DIR=. git apply --check %s %s --verbose', $patch_level, $filename);
-      //if ($patch_level == '-p1') { echo implode("\n", drush_shell_exec_output()) . "\n"; }
-      if ($result) {
-        $status = FALSE;
-        break;
-      }
-    }
-
+    $result = DrushPatchFileGit::checkPatch($directory, $filename);
+    $applied = $result['applied'];
     drush_op('unlink', $filename);
   }
 
   if (!$nice_format) {
-    return $status;
+    return $applied;
   }
 
-  if ($status === TRUE) {
+  if ($applied === TRUE) {
     return _drush_patchfile_color('green', dt('Yes'));
   }
-  elseif ($status === FALSE) {
+  elseif ($applied === FALSE) {
     return _drush_patchfile_color('red', dt('No'));
   }
   else {
@@ -515,56 +498,22 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
 
   $patches_txt = '';
   $local_patches = array();
-  $ignore_checksums = TRUE; // drush_get_option('ignore-checksums');
   foreach ($patches as $info) {
     // $this->preprocessLocalFileUrl($info);
 
     // Download the patch.
     if ($filename = _make_download_file($info['url'])) {
-      $patched = FALSE;
-      $output = '';
-      // Test each patch style; -p1 is the default with git. See
-      // http://drupal.org/node/1054616
-      $patch_levels = array('-p1', '-p0');
-      foreach ($patch_levels as $patch_level) {
-        $checked = drush_shell_cd_and_exec($project_directory, 'GIT_DIR=. git apply --check %s %s --verbose', $patch_level, $filename);
-        if ($checked) {
-          // Apply the first successful style.
-          $patched = drush_shell_cd_and_exec($project_directory, 'GIT_DIR=. git apply %s %s --verbose', $project_directory, $patch_level, $filename);
-          break;
-        }
-      }
-
-      // In some rare cases, git will fail to apply a patch, fallback to using
-      // the 'patch' command.
-      if (!$patched) {
-        foreach ($patch_levels as $patch_level) {
-          $checked = drush_shell_cd_and_exec($project_directory, "patch %s --dry-run < %s", $patch_level, $filename);
-          if ($checked) {
-            // Apply the first successful style.
-            if ($patched = drush_shell_cd_and_exec($project_directory, "patch %s < %s", $patch_level, $filename)) {
-              break;
-            }
-          }
-        }
-      }
-
-      if ($output = drush_shell_exec_output()) {
-        // Log any command output, visible only in --verbose or --debug mode.
-        drush_log(implode("\n", $output));
-      }
+      $patched = DrushPatchFileGit::applyPatch($project_directory, $filename);
 
       // Set up string placeholders to pass to dt().
       $dt_args = array(
         '@name' => $project_name,
         '@filename' => basename($filename),
       );
+
       drush_op('unlink', $filename);
 
       if ($patched) {
-        // if (!$ignore_checksums && !_make_verify_checksums($info, $filename)) {
-        //    return FALSE;
-        // }
         // $patch_url = $info['url'];
 
         // // If this is a local patch, copy that into place as well.
