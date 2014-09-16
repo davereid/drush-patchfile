@@ -18,26 +18,38 @@ class DrushPatchFileGit {
           throw new Exception("Unable to read patch from local path {$patch['url']}.");
         }
       }
+      elseif (drush_get_option('no-cache')) {
+        $temp_file = drush_tempnam('drush_patchfile_', NULL, '.patch');
+        $cache[$patch['url']] = static::downloadPatch($patch['url'], $temp_file);
+      }
       else {
         $cache_file = drush_directory_cache('patchfile') . '/' . md5($patch['url']) . '.patch';
-        if (file_exists($cache_file) && filesize($cache_file) && filectime($cache_file) > ($_SERVER['REQUEST_TIME'] - DRUSH_CACHE_LIFETIME_DEFAULT)) {
+        if (is_file($cache_file) && filectime($cache_file) > ($_SERVER['REQUEST_TIME'] - DRUSH_CACHE_LIFETIME_DEFAULT)) {
           drush_log(dt('Remote patch URL @url fetched from cache file @cache.', array('@url' => $patch['url'], '@cache' => $cache_file)));
           $cache[$patch['url']] = $cache_file;
         }
         else {
-          $downloaded = _drush_download_file($patch['url'], $cache_file, TRUE);
-          if ($downloaded && filesize($downloaded)) {
-            drush_log(dt('Remote patch @url downloaded and cached to @cache.', array('@url' => $patch['url'], '@cache' => $cache_file)));
-            $cache[$patch['url']] = $downloaded;
-          }
-          else {
-            throw new Exception("Unable to download or fetch patch from {$patch['url']} and cache to {$cache_file}.");
-          }
+          $cache[$patch['url']] =static::downloadPatch($patch['url'], $cache_file);
         }
       }
     }
 
     return $cache[$patch['url']];
+  }
+
+  public static function downloadPatch($url, $destination) {
+    if ($downloaded = _drush_download_file($url, $destination, TRUE)) {
+      if (!filesize($downloaded)) {
+        throw new Exception("Remote patch {$url} downloaded as empty file {$destination}.");
+      }
+      else {
+        drush_log(dt('Remote patch @url downloaded to @file.', array('@url' => $url, '@file' => $downloaded)));
+        return $downloaded;
+      }
+    }
+    else {
+      throw new Exception("Unable to download or fetch remote patch from {$url} and save to {$destination}.");
+    }
   }
 
   public static function checkPatch($directory, array $patch) {

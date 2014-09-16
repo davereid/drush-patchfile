@@ -13,6 +13,7 @@ require_once __DIR__ . '/src/DrushPatchFileGit.php';
 function patchfile_drush_command() {
   $options = array(
     'patch-file' => 'Location of the patch make file.',
+    'no-cache' => 'Do not use the remote patch file caching (defaults to cache enabled).',
   );
 
   $items['patch-status'] = array(
