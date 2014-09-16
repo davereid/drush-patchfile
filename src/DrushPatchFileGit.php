@@ -21,15 +21,17 @@ class DrushPatchFileGit {
       else {
         $cache_file = drush_directory_cache('patchfile') . '/' . md5($patch['url']) . '.patch';
         if (file_exists($cache_file) && filesize($cache_file) && filectime($cache_file) > ($_SERVER['REQUEST_TIME'] - DRUSH_CACHE_LIFETIME_DEFAULT)) {
+          drush_log(dt('Remote patch URL @url fetched from cache file @cache.', array('@url' => $patch['url'], '@cache' => $cache_file)));
           $cache[$patch['url']] = $cache_file;
         }
         else {
           $downloaded = _drush_download_file($patch['url'], $cache_file, TRUE);
           if ($downloaded && filesize($downloaded)) {
+            drush_log(dt('Remote patch @url downloaded and cached to @cache.', array('@url' => $patch['url'], '@cache' => $cache_file)));
             $cache[$patch['url']] = $downloaded;
           }
           else {
-            throw new Exception("Unable to download or fetch patch from {$patch['url']}.");
+            throw new Exception("Unable to download or fetch patch from {$patch['url']} and cache to {$cache_file}.");
           }
         }
       }
