@@ -11,7 +11,12 @@ class DrushPatchFileGit {
 
     if (!isset($cache[$patch['url']])) {
       if (!empty($patch['local'])) {
-        $cache[$patch['url']] = $patch['url'];
+        if (is_file($patch['url'])) {
+          $cache[$patch['url']] = $patch['url'];
+        }
+        else {
+          throw new Exception("Unable to read patch from local path {$patch['url']}.");
+        }
       }
       else {
         $cache_file = drush_directory_cache('patchfile') . '/' . md5($patch['url']) . '.patch';
