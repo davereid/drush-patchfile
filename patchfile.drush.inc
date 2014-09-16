@@ -153,19 +153,6 @@ function drush_patchfile_patch_add($project_name, $url) {
     '@file' => $file,
   );
 
-  $patches = _drush_patchfile_get_possible_patches_from_url($url);
-  if ($patches !== FALSE) {
-    if (empty($patches)) {
-      return drush_set_error('DRUSH_PROJECT_URL_NO_PATCHES', dt("No patches found on @url.", $args));
-    }
-    else {
-      $patch = drush_choice($patches, dt("Which patch do you want to apply?"));
-      if ($patch === FALSE) {
-        return FALSE;
-      }
-    }
-  }
-
   $project_directory = drush_patchfile_project_get_directory($project_name);
   if (empty($project_directory)) {
     return drush_set_error('DRUSH_PROJECT_NOT_FOUND', dt("The project @project was not found.", $args));
@@ -338,7 +325,7 @@ function drush_patchfile_parse_info_file($file) {
 
       // Normalize each patch record.
       foreach ($project_info['patch'] as &$patch_info) {
-       _drush_patchfile_preprocess_local_file_url($patch_info, $file);
+        _drush_patchfile_preprocess_local_file_url($patch_info, $file);
       }
     }
   }
@@ -442,12 +429,26 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   if (is_string($info)) {
     $info = array('url' => $info, 'local' => FALSE);
   }
+
   if (!_drush_patchfile_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
     $info['url'] = dirname($makefile) . '/' . $info['url'];
     $info['local'] = TRUE;
-  } elseif (substr($info['url'], 0, 8) == 'file:///') {
+  }
+  elseif (substr($info['url'], 0, 8) == 'file:///') {
     $info['url'] = substr($info['url'], 7);
     $info['local'] = TRUE;
+  }
+
+  $patches = _drush_patchfile_get_possible_patches_from_url($info['url']);
+  if ($patches !== FALSE) {
+    if (empty($patches)) {
+      throw new Exception("Unable to determine patch file for {$info['url']}.");
+    }
+    else {
+      if ($patch = drush_choice($patches, dt("Which patch do you want to apply?"))) {
+        $info['url'] = $patch;
+      }
+    }
   }
 }
 
@@ -554,41 +555,48 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
 }
 
 function _drush_patchfile_get_possible_patches_from_url($url) {
-  if (preg_match('~^https?://(?:www.)?drupal.org(/node/\d+(#comment-\d+)?)~', $url, $matches)) {
+  if (preg_match('~^https?://(?:www\.)?drupal\.org(/node/\d+(#comment-\d+)?)~i', $url, $matches)) {
     $patches = array();
-    $filename = drush_download_file($url, drush_tempnam(md5($url)));
-    @$dom = DOMDocument::loadHTMLFile($filename);
-    $xpath = new DOMXpath($dom);
+    if ($request = @file_get_contents($url)) {
+      $dom = @new DOMDocument();
+      @$dom->loadHTML($request);
+      $xpath = new DOMXpath($dom);
 
-    foreach ($xpath->query("//table[@id='extended-file-field-table-field-issue-files']/tbody/tr[not(contains(concat(' ',normalize-space(@class),' '),' element-hidden '))]") as $element) {
-      $file_xpath = $xpath->query("td[@class='extended-file-field-table-filename']//a", $element);
-      if (!$file_xpath->length) {
-        continue;
+      foreach ($xpath->query("//table[@id='extended-file-field-table-field-issue-files']/tbody/tr[not(contains(concat(' ',normalize-space(@class),' '),' element-hidden '))]") as $element) {
+        $file_xpath = $xpath->query("td[@class='extended-file-field-table-filename']//a", $element);
+        if (!$file_xpath->length) {
+          continue;
+        }
+
+        // If a comment number was provided, then filter the results to only
+        // patches that match the comment.
+        $cid_query = "td[@class='extended-file-field-table-cid']//a";
+        if (!empty($matches[2])) {
+          $cid_query .= "[@href='{$matches[1]}']";
+        }
+        $cid_xpath = $xpath->query($cid_query, $element);
+        if (!$cid_xpath->length) {
+          continue;
+        }
+        $cid = ltrim($cid_xpath->item(0)->textContent, '#');
+
+        $size = $xpath->query("td[@class='extended-file-field-table-filesize']", $element)->item(0)->textContent;
+        $author = $xpath->query("td[@class='extended-file-field-table-uid']//a", $element)->item(0)->textContent;
+
+        $patch_url = $file_xpath->item(0)->getAttribute('href');
+        $patches[$patch_url] = array(
+          'patch' => $file_xpath->item(0)->textContent,
+          'details' =>  sprintf("%10s by %s on comment %d", $size, $author, $cid),
+        );
       }
-
-      // If a comment number was provided, then filter the results to only
-      // patches that match the comment.
-      $cid_query = "td[@class='extended-file-field-table-cid']//a";
-      if (!empty($matches[2])) {
-        $cid_query .= "[@href='{$matches[1]}']";
-      }
-      $cid_xpath = $xpath->query($cid_query, $element);
-      if (!$cid_xpath->length) {
-        continue;
-      }
-      $cid = ltrim($cid_xpath->item(0)->textContent, '#');
-
-      $size = $xpath->query("td[@class='extended-file-field-table-filesize']", $element)->item(0)->textContent;
-      $author = $xpath->query("td[@class='extended-file-field-table-uid']//a", $element)->item(0)->textContent;
-
-      $patch_url = $file_xpath->item(0)->getAttribute('href');
-      $patches[$patch_url] = array(
-        'patch' => $file_xpath->item(0)->textContent,
-        'details' =>  sprintf("%10s by %s on comment %d", $size, $author, $cid),
-      );
     }
-
     return $patches;
+  }
+
+  if (preg_match('~^https://github\.com/[\w-]+/[\w-]+/pull/\d+$~i', $url, $matches)) {
+    if (@file_get_contents($url . '.patch')) {
+      return array($url . '.patch' => $url);
+    }
   }
 
   return FALSE;
