@@ -384,22 +384,16 @@ function drush_patchfile_project_get_directory($project_name) {
  *   the patch is applied or not (likely re-roll needed).
  */
 function drush_patchfile_is_patch_applied(array $patch, $directory, $nice_format = FALSE) {
-  $applied = NULL;
-
-  if ($filename = _make_download_file($patch['url'])) {
-    $result = DrushPatchFileGit::checkPatch($directory, $filename);
-    $applied = $result['applied'];
-    drush_op('unlink', $filename);
-  }
+  $result = DrushPatchFileGit::checkPatch($directory, $patch);
 
   if (!$nice_format) {
-    return $applied;
+    return $result['status'];
   }
 
-  if ($applied === TRUE) {
+  if ($result['status'] === DrushPatchFileGit::PATCH_APPLIED) {
     return _drush_patchfile_color('green', dt('Yes'));
   }
-  elseif ($applied === FALSE) {
+  elseif ($result['status'] === DrushPatchFileGit::PATCH_UNAPPLIED) {
     return _drush_patchfile_color('red', dt('No'));
   }
   else {
@@ -509,20 +503,15 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
 
   $patches_txt = '';
   $local_patches = array();
-  foreach ($patches as $info) {
-    // $this->preprocessLocalFileUrl($info);
-
-    // Download the patch.
-    if ($filename = _make_download_file($info['url'])) {
-      $patched = DrushPatchFileGit::applyPatch($project_directory, $filename);
+  foreach ($patches as $patch) {
+    try {
+      $patched = DrushPatchFileGit::applyPatch($project_directory, $patch);
 
       // Set up string placeholders to pass to dt().
       $dt_args = array(
         '@name' => $project_name,
-        '@filename' => basename($filename),
+        '@patch' => basename($patch['url']),
       );
-
-      drush_op('unlink', $filename);
 
       if ($patched) {
         // $patch_url = $info['url'];
@@ -536,15 +525,15 @@ function _drush_patchfile_project_apply_patches($project_name, array $patches, $
         // }
         // $patches_txt .= '- ' . $patch_url . "\n";
 
-        drush_log(dt('@name patched with @filename.', $dt_args), 'success');
+        drush_log(dt('@name patched with @patch.', $dt_args), 'success');
       }
       else {
-        make_error('PATCH_ERROR', dt("Unable to patch @name with @filename.", $dt_args));
+        make_error('PATCH_ERROR', dt("Unable to patch @name with @patch.", $dt_args));
         return FALSE;
       }
     }
-    else {
-      drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @patch.', array('@patch' => $info['url'])));
+    catch (Exception $e) {
+      drush_set_error('DRUSH_PATCH_ERROR', $e->getMessage());
       return FALSE;
     }
   }

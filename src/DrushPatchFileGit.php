@@ -2,9 +2,23 @@
 
 class DrushPatchFileGit {
 
-  public static function checkPatch($directory, $patch_filename) {
+  const PATCH_APPLIED = 'applied';
+  const PATCH_UNAPPLIED = 'unapplied';
+  const PATCH_UNDETERMINED = 'undetermind';
+
+  public static function getPatch(array $patch) {
+    $filename = _make_download_file($patch['url']);
+    if (!$filename) {
+      throw new Exception("Unable to download or fetch patch from {$patch['url']}.");
+    }
+    return $filename;
+  }
+
+  public static function checkPatch($directory, array $patch) {
+    $patch_filename = static::getPatch($patch);
+
     $status = array(
-      'applied' => NULL,
+      'applied' => static::PATCH_UNDETERMINED,
     );
 
     // Test each patch style; -p1 is the default with git. See
@@ -14,7 +28,7 @@ class DrushPatchFileGit {
 
       // Test if the patch can be reverted, which would mean it is applied.
       if (static::execute($directory, 'GIT_DIR=. git apply --check -R %s %s', $patch_level, $patch_filename)) {
-        $status['applied'] = TRUE;
+        $status['status'] = static::PATCH_APPLIED;
         $status['method'] = 'git apply';
         $status['level'] = $patch_level;
         break;
@@ -22,7 +36,7 @@ class DrushPatchFileGit {
 
       // Test if the patch can be re-applied.
       if (static::execute($directory, 'GIT_DIR=. git apply --check %s %s', $patch_level, $patch_filename)) {
-        $status['applied'] = FALSE;
+        $status['status'] = static::PATCH_UNAPPLIED;
         $status['method'] = 'git apply';
         $status['level'] = $patch_level;
         break;
@@ -31,12 +45,12 @@ class DrushPatchFileGit {
 
     // In some rare cases, git will fail to apply a patch, fallback to using
     // the 'patch' command.
-    if (!isset($status['applied'])) {
+    if ($status['applied'] === static::PATCH_UNDETERMINED) {
       foreach ($patch_levels as $patch_level) {
 
         // Test if the patch can be reverted, which would mean it is applied.
         if (static::execute($directory, "patch %s -R --dry-run < %s", $patch_level, $patch_filename)) {
-          $status['applied'] = TRUE;
+          $status['status'] = static::PATCH_APPLIED;
           $status['method'] = 'patch';
           $status['level'] = $patch_level;
           break;
@@ -44,7 +58,7 @@ class DrushPatchFileGit {
 
         // Test if the patch can be re-applied.
         if (static::execute($directory, "patch %s --dry-run < %s", $patch_level, $patch_filename)) {
-          $status['applied'] = FALSE;
+          $status['status'] = static::PATCH_UNAPPLIED;
           $status['method'] = 'patch';
           $status['level'] = $patch_level;
           break;
@@ -52,24 +66,38 @@ class DrushPatchFileGit {
       }
     }
 
+    drush_op('unlink', $patch_filename);
+
     return $status;
   }
 
-  public static function applyPatch($directory, $patch_filename) {
-    $status = static::checkPatch($directory, $patch_filename);
-    if ($status['applied'] !== FALSE) {
-      throw new Exception("Cannot apply patch $patch_filename to $directory.");
+  public static function applyPatch($directory, array $patch) {
+    $status = static::checkPatch($directory, $patch);
+
+    switch ($status['status']) {
+      case static::PATCH_APPLIED:
+        throw new Exception("Patch {$patch['url']} already applied to $directory.");
+
+      case static::PATCH_UNDETERMINED;
+        throw new Exception("Cannot apply patch {$patch['url']} to $directory.");
+
+      case static::PATCH_UNAPPLIED:
+        $result = FALSE;
+        $patch_filename = static::getPatch($patch);
+
+        switch ($status['method']) {
+          case 'git apply':
+            $result = static::execute($directory, 'GIT_DIR=. git apply %s %s', $status['level'], $patch_filename);
+            break;
+
+          case 'patch':
+            $result = static::execute($directory,  "patch %s < %s", $status['level'], $patch_filename);
+            break;
+        }
+
+        drush_op('unlink', $patch_filename);
+        return $result;
     }
-
-    switch ($status['method']) {
-      case 'git apply':
-        return static::execute($directory, 'GIT_DIR=. git apply %s %s', $status['level'], $patch_filename);
-
-      case 'patch':
-        return static::execute($directory,  "patch %s < %s", $status['level'], $patch_filename);
-    }
-
-    return FALSE;
   }
 
   public static function execute($directory, $command) {
