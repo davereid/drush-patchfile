@@ -7,11 +7,30 @@ class DrushPatchFileGit {
   const PATCH_UNDETERMINED = 'undetermined';
 
   public static function getPatch(array $patch) {
-    $filename = _make_download_file($patch['url']);
-    if (!$filename) {
-      throw new Exception("Unable to download or fetch patch from {$patch['url']}.");
+    static $cache = array();
+
+    if (!isset($cache[$patch['url']])) {
+      if (!empty($patch['local'])) {
+        $cache[$patch['url']] = $patch['url'];
+      }
+      else {
+        $cache_file = drush_directory_cache('patchfile') . '/' . md5($patch['url']) . '.patch';
+        if (file_exists($cache_file) && filesize($cache_file) && filectime($cache_file) > ($_SERVER['REQUEST_TIME'] - DRUSH_CACHE_LIFETIME_DEFAULT)) {
+          $cache[$patch['url']] = $cache_file;
+        }
+        else {
+          $downloaded = _drush_download_file($patch['url'], $cache_file, TRUE);
+          if ($downloaded && filesize($downloaded)) {
+            $cache[$patch['url']] = $downloaded;
+          }
+          else {
+            throw new Exception("Unable to download or fetch patch from {$patch['url']}.");
+          }
+        }
+      }
     }
-    return $filename;
+
+    return $cache[$patch['url']];
   }
 
   public static function checkPatch($directory, array $patch) {
