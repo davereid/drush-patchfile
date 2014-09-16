@@ -11,7 +11,7 @@ class DrushPatchFileGit {
 
     if (!isset($cache[$patch['url']])) {
       if (!empty($patch['local'])) {
-        if (is_file($patch['url'])) {
+        if (is_file($patch['url']) && filesize($patch['url'])) {
           $cache[$patch['url']] = $patch['url'];
         }
         else {
