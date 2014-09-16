@@ -78,11 +78,23 @@ $options['patch-file'] = '../patches.make';
 
 ### drush patch-status (ps)
 
-TODO
+See a summary of the status of patches that have been applied. You'll receive
+a status for each project that has patches. Response values are either Yes,
+No, or Unsure. These should be obvious with the exception of Unsure. Unsure
+means that the patch in question could neither be reverted from the current
+state of the code (in which case the patch is applied, ie Yes) nor re-applied.
+In the case of Unsure, you'll need to manually investigate the state of the
+patch in question.
 
 ### drush patch-project (pp)
 
-TODO
+Use this command to apply patches against a given project. If for example
+you've updated a module and need to re-apply patches, you would use this comand
+with that module name to do that.
+
+### drush patch-apply-all (paa)
+
+Use this command to apply all the patches listed in the patch file.
 
 ### drush pm-download (dl)
 

@@ -21,8 +21,14 @@ function patchfile_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     'aliases' => array('ps'),
   );
+  $items['patch-apply-all'] = array(
+    'description' => 'Apply all patches listed in the patch file.',
+    'options' => $options,
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+    'aliases' => array('paa'),
+  );
   $items['patch-project'] = array(
-    'description' => 'List the patches that should be applied to the site.',
+    'description' => 'Apply all the patches for a specific project as listed in the patch file.',
     'arguments' => array(
       'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
       'project-directory' => 'Optional, the directory of the project to use for the patches.',
@@ -35,7 +41,7 @@ function patchfile_drush_command() {
     'aliases' => array('pp'),
   );
   $items['patch-add'] = array(
-    'description' => 'Add a new patch to the make file.',
+    'description' => 'Add a new patch to the patch file.',
     'arguments' => array(
       'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
       'patch-file' => 'The path to the patch to apply. Can be an external URL.',
@@ -46,12 +52,6 @@ function patchfile_drush_command() {
     ) + $options,
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     'aliases' => array('pa'),
-  );
-  $items['patch-apply-all'] = array(
-    'description' => 'Apply all patches',
-    'options' => $options,
-    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
-    'aliases' => array('paa'),
   );
 
   return $items;
