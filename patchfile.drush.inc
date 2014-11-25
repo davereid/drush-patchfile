@@ -21,6 +21,10 @@ function patchfile_drush_command() {
     'options' => $options,
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     'aliases' => array('ps'),
+    'arguments' => array(
+      'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
+    ),
+    'required-arguments' => FALSE,
   );
   $items['patch-apply-all'] = array(
     'description' => 'Apply all patches listed in the patch file.',
@@ -58,8 +62,12 @@ function patchfile_drush_command() {
   return $items;
 }
 
-function drush_patchfile_patch_status() {
+function drush_patchfile_patch_status($project_name = NULL) {
   $projects = drush_patchfile_get_patched_projects();
+
+  if (!empty($project_name)) {
+    $projects = array_intersect_key($projects, array($project_name => NULL));
+  }
 
   if (empty($projects)) {
     return drush_print(dt('No patches found.'));
