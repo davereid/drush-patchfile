@@ -173,18 +173,18 @@ function drush_patchfile_patch_add($project_name, $url) {
 
   if (!drush_get_option('no-apply')) {
     if (_drush_patchfile_project_apply_patches($project_name, array($patch), $project_directory) || drush_get_option('force')) {
-      _drush_patchfile_add_patch($project_name, $url, $file);
+      _drush_patchfile_add_patch($project_name, $patch['patch'], $file);
     }
     else {
       if (drush_confirm("Would you still like to add this patch to the patch file?")) {
-        _drush_patchfile_add_patch($project_name, $url, $file);
+        _drush_patchfile_add_patch($project_name, $patch['patch'], $file);
       }
       return FALSE;
     }
   }
   else {
     if (_make_download_file($patch['url']) || drush_get_option('force')) {
-      _drush_patchfile_add_patch($project_name, $url, $file);
+      _drush_patchfile_add_patch($project_name, $patch['patch'], $file);
     }
     else {
       return drush_set_error('DOWNLOAD_ERROR', dt('Unable to download or fetch @url.', $args));
@@ -426,6 +426,7 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   if (is_string($info)) {
     $info = array('url' => $info, 'local' => FALSE);
   }
+  $info['patch'] = $info['url'];
 
   if (!_drush_patchfile_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
     $info['url'] = dirname($makefile) . '/' . $info['url'];
@@ -442,11 +443,11 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
       throw new Exception("Unable to determine patch file for {$info['url']}.");
     }
     elseif (count($patches) == 1) {
-      $info['url'] = key($patches);
+      $info['url'] = $info['patch'] = key($patches);
     }
     else {
       if ($patch = drush_choice($patches, dt("Which patch do you want to apply?"))) {
-        $info['url'] = $patch;
+        $info['url'] = $info['patch'] = $patch;
       }
       else {
         return FALSE;
