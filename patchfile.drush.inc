@@ -437,8 +437,19 @@ function _drush_patchfile_preprocess_local_file_url(&$info, $makefile) {
   $info['patch'] = $info['url'];
 
   if (!_drush_patchfile_is_url($info['url']) && !drush_is_absolute_path($info['url'])) {
-    $info['url'] = dirname($makefile) . '/' . $info['url'];
-    $info['local'] = TRUE;
+    $makefiles = _drush_patchfile_get_all_files($makefile);
+    $makefiles = array_map('realpath', $makefiles);
+    $possible_dirs = array_unique(array_map('dirname', $makefiles));
+    foreach ($possible_dirs as $possible_dir) {
+      if (is_file($possible_dir . '/' . $info['url'])) {
+        $info['url'] = $possible_dir . '/' . $info['url'];
+        $info['local'] = TRUE;
+        break;
+      }
+    }
+    if (!$info['local']) {
+      throw new Exception("Unable to determine patch file location for {$info['url']}.");
+    }
   }
   elseif (substr($info['url'], 0, 8) == 'file:///') {
     $info['url'] = substr($info['url'], 7);
