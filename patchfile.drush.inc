@@ -203,8 +203,8 @@ function drush_patchfile_patch_add($project_name, $url) {
   // Check to see if this project is already patched with this patch.
   $projects = drush_patchfile_get_patched_projects();
   if (isset($projects[$project_name])) {
-    if (in_array($patch, $projects[$project_name]['patch'])) {
-      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @url is already listed as a patch for @project in @file.", $args));
+    if (in_array($patch, $projects[$project_name]['patch']) || in_array($url, $projects[$project_name]['patch'])) {
+      return drush_set_error('DRUSH_PATCH_ALREADY_LISTED', dt("The patch @url is already listed as a patch for @project.", $args));
     }
   }
 
