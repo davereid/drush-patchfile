@@ -121,7 +121,7 @@ class DrushPatchFileGit {
 
         switch ($patch['method']) {
           case 'git apply':
-            $result = static::execute($directory, 'git apply --git-dir=. %s %s', $patch['level'], $patch_filename);
+            $result = static::execute($directory, 'git --git-dir=. apply %s %s', $patch['level'], $patch_filename);
             break;
 
           case 'patch':
