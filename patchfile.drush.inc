@@ -399,7 +399,12 @@ function drush_patchfile_project_get_directory($project_name) {
   //$projects = array_merge($projects, drush_find_profiles($drupal_root));
 
   if (isset($projects[$project_name])) {
-    return $drupal_root . '/' . dirname($projects[$project_name]->filename);
+    if (get_class($projects[$project_name]) === 'Drupal\Core\Extension\Extension') {
+      $filename = $projects[$project_name]->getFileName();
+    } else {
+      $filename = $projects[$project_name]->filename;
+    }
+    return $drupal_root . '/' . dirname($filename);
   }
 
   return FALSE;
