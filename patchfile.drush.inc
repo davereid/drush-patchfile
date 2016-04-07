@@ -400,7 +400,7 @@ function drush_patchfile_project_get_directory($project_name) {
 
   if (isset($projects[$project_name])) {
     if (get_class($projects[$project_name]) === 'Drupal\Core\Extension\Extension') {
-      $filename = $projects[$project_name]->getFileName();
+      $filename = $projects[$project_name]->getExtensionPathname();
     } else {
       $filename = $projects[$project_name]->filename;
     }
