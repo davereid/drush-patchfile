@@ -35,7 +35,7 @@ function patchfile_drush_command() {
   $items['patch-project'] = array(
     'description' => 'Apply all the patches for a specific project as listed in the patch file.',
     'arguments' => array(
-      'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
+      'project-name' => 'The name of the module, theme, profile, or \'drupal\' to re-apply patches to.',
       'project-directory' => 'Optional, the directory of the project to use for the patches.',
     ),
     'required-arguments' => 1,
@@ -48,7 +48,7 @@ function patchfile_drush_command() {
   $items['patch-add'] = array(
     'description' => 'Add a new patch to the patch file.',
     'arguments' => array(
-      'project-name' => 'The name of the module, theme, profile, or \'core\' to re-apply patches to.',
+      'project-name' => 'The name of the module, theme, profile, or \'drupal\' to re-apply patches to.',
       'patch-file' => 'The path to the patch to apply. Can be an external URL.',
     ),
     'required-arguments' => TRUE,
