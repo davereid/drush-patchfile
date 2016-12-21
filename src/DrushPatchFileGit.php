@@ -63,7 +63,7 @@ class DrushPatchFileGit {
     foreach ($patch_levels as $patch_level) {
 
       // Test if the patch can be reverted, which would mean it is applied.
-      if (static::execute($directory, 'git apply --git-dir=. --check -R %s %s', $patch_level, $patch_filename)) {
+      if (static::execute($directory, 'git --git-dir=. apply --check -R %s %s', $patch_level, $patch_filename)) {
         $patch['status'] = static::PATCH_APPLIED;
         $patch['method'] = 'git apply';
         $patch['level'] = $patch_level;
@@ -71,7 +71,7 @@ class DrushPatchFileGit {
       }
 
       // Test if the patch can be re-applied.
-      if (static::execute($directory, 'git apply --git-dir=.--check %s %s', $patch_level, $patch_filename)) {
+      if (static::execute($directory, 'git --git-dir=. apply --check %s %s', $patch_level, $patch_filename)) {
         $patch['status'] = static::PATCH_UNAPPLIED;
         $patch['method'] = 'git apply';
         $patch['level'] = $patch_level;
@@ -121,7 +121,7 @@ class DrushPatchFileGit {
 
         switch ($patch['method']) {
           case 'git apply':
-            $result = static::execute($directory, 'git apply --git-dir=. %s %s', $patch['level'], $patch_filename);
+            $result = static::execute($directory, 'git --git-dir=. apply %s %s', $patch['level'], $patch_filename);
             break;
 
           case 'patch':
